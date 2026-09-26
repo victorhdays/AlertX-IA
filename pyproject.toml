@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 160
+target-version = "py313"
+exclude = ["backend_fastapi/*.pkl", "backend_fastapi/dataset_accidentes_sintetico.csv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "BLE"]
+ignore = [
+  # FastAPI's dependency injection intentionally uses call expressions in annotations.
+  "B008",
+  # This boundary catches every unexpected error to avoid leaking upstream details.
+  "BLE001",
+  "B007",
+  "I001",
+]

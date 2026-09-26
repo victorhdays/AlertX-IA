@@ -1,239 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'data/repository.dart';
+import 'screens/dashboard.dart';
+import 'screens/login.dart';
+import 'ui/theme.dart';
 
-void main() {
-  runApp(const VialAlertApp());
+bool validEndpoint(String value) {
+  final uri = Uri.tryParse(value);
+  return uri != null &&
+      uri.host.isNotEmpty &&
+      uri.userInfo.isEmpty &&
+      (uri.scheme == 'https' ||
+          (uri.scheme == 'http' &&
+              const ['localhost', '127.0.0.1', '10.0.2.2'].contains(uri.host)));
 }
 
-class VialAlertApp extends StatelessWidget {
-  const VialAlertApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'AlertX',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-      ),
-      home: const LoginScreen(),
-    );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  const publicKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  const apiUrl = String.fromEnvironment('API_BASE_URL');
+  ReportRepository repository = UnconfiguredRepository();
+  if (validEndpoint(supabaseUrl) &&
+      validEndpoint(apiUrl) &&
+      publicKey.isNotEmpty &&
+      !publicKey.startsWith('sb_secret_')) {
+    try {
+      await Supabase.initialize(url: supabaseUrl, publishableKey: publicKey);
+      repository = SupabaseReportRepository(
+        Supabase.instance.client.auth,
+        apiUrl,
+      );
+    } catch (_) {
+      // Keep a usable error screen if local session storage cannot initialize.
+    }
   }
+  runApp(AlertXApp(repository: repository));
 }
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-
+class AlertXApp extends StatelessWidget {
+  const AlertXApp({
+    super.key,
+    required this.repository,
+    this.enablePreview = const bool.fromEnvironment('DEMO_MODE'),
+  });
+  final ReportRepository repository;
+  final bool enablePreview;
   @override
-  Widget build(BuildContext context) {
-    TextEditingController correoController =
-        TextEditingController();
-
-    TextEditingController passwordController =
-        TextEditingController();
-
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Center(
-        child: Container(
-          width: 350,
-          padding: const EdgeInsets.all(25),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                blurRadius: 10,
-                color: Colors.black12,
-              )
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.car_crash,
-                color: Colors.red,
-                size: 80,
-              ),
-
-              const SizedBox(height: 10),
-
-              const Text(
-                "VialAlert PR",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              const Text(
-                "Sistema Inteligente de Emergencias Viales",
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 30),
-
-              TextField(
-                controller: correoController,
-                decoration: InputDecoration(
-                  labelText: "Correo",
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: "Contraseña",
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 25),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const HomeScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "Iniciar Sesión",
-                    style: TextStyle(fontSize: 18),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("VialAlert PR"),
-        backgroundColor: Colors.red,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius:
-                    BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: const [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.red,
-                    size: 60,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "¿Tuviste un accidente?",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Presiona el botón para enviar tu ubicación al C4",
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              height: 70,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title:
-                          const Text("Alerta enviada"),
-                      content: const Text(
-                        "Tu ubicación GPS ha sido enviada al C4 exitosamente.",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: const Text("OK"),
-                        )
-                      ],
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.sos),
-                label: const Text(
-                  "REPORTAR ACCIDENTE",
-                  style: TextStyle(fontSize: 20),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                ),
-                onPressed: () {},
-                icon: const Icon(Icons.menu_book),
-                label: const Text(
-                  "Evaluación Vial",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
+    title: 'AlertX · Movilidad segura',
+    theme: alertTheme(),
+    locale: const Locale('es', 'MX'),
+    supportedLocales: const [Locale('es', 'MX')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    home: ListenableBuilder(
+      listenable: repository,
+      builder: (context, _) => repository.authenticated
+          ? Dashboard(key: ValueKey(repository.email), repository: repository)
+          : LoginScreen(repository: repository, enablePreview: enablePreview),
+    ),
+  );
 }
